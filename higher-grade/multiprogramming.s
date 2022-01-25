@@ -431,9 +431,9 @@ __save_running_job_context:
 	
 TODO_1: # Save $a0, $a1, $s0 to the context. 
         	
-	sw $s0, 8($a0)
-	sw $s0, 12($a1)
-	sw $s0, 16($s0)
+	sw $a0, 8($k1)
+	sw $a1, 12($k1)
+	sw $s0, 16($k1)
 	lw $a0, __at            # NOTE: $at was saved to memory when entering the kernel!
 	sw $a0, 20($k1)         # $at
 	
@@ -477,8 +477,8 @@ TODO_2: # Restore $a0, $a1, $s0 from the context.
 	# Set EPC in Coprocessor 0 to the PC value read from context. 
 	
 	mtc0 $k1, $14
-	lw $s0, 8($a0)
-	lw $s0, 12($a1)
+	lw $a0, 8($a0)
+	lw $a1, 12($a1)
 	lw $s0, 16($s0) 		
 	
 	jr $ra
