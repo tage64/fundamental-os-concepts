@@ -477,9 +477,9 @@ TODO_2: # Restore $a0, $a1, $s0 from the context.
 	# Set EPC in Coprocessor 0 to the PC value read from context. 
 	
 	mtc0 $k1, $14
-	lw $a0, 8($a0)
-	lw $a1, 12($a1)
-	lw $s0, 16($s0) 		
+	lw $a0, 8($k0)
+	lw $a1, 12($k0)
+	lw $s0, 16($k0) 		
 	
 	jr $ra
 	
@@ -645,8 +645,9 @@ TODO_7:	# The value of EPC + 4 must now be saved in the context of the caller.
 	# TIP: Use the sw (Store Word) instruction to save the content of EPC + 4 ($t1) 
 	# Save EPC + 4 in user context at offset 0 (program counter). 
 	
-	mtc0 $t1, $14 
-		
+	#mtc0 $t1, $14 
+	sw $t1, 0($k1)
+	
 	# Job id of job to resume while the calling job waits. 
 	
    	lw $k0, __ready 
