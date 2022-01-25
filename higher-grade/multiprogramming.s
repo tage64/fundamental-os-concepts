@@ -72,7 +72,7 @@ boot:
 	# Set PC in job 1 context
 	
 	la $t0, __job_1_context
-	la $t1, job_getc
+	la $t1, job_gets
 	sw $t1, 0($t0)
 	
 	# Job 1 will start to execute.
@@ -119,12 +119,14 @@ boot:
 # Strings used by the jobs to print messages to the Run I/O pane. 
 
 JOB_GETC_HELLO:		.asciiz "Job started running getc\n"
+JOB_GETS_HELLO:		.asciiz "Job started running gets\n"
 JOB_ÌNCREMENT_HELLO:	.asciiz "Job started running increment\n"
 
 JOB_ID:			.asciiz "Job id = "
 NL:			.asciiz "\n"
 
 PRESS_KEY:		.asciiz "Press a key on the keyboard ...\n"
+ENTER_SRTING		.asciiz "Enter a string ...\n"
 PRESS_MMIO_KEY:		.asciiz "Type a character in the MMIO Simulator keyboard input area ..\n"
 
 # In these strings the X is at offset 17 and will be replaced before printing. 
@@ -286,6 +288,96 @@ job_getc_infinite_loop:
 	j job_getc_infinite_loop
 
 
+#------------------------------------------------------------------------------
+# GETS
+#
+# User level job. 
+#------------------------------------------------------------------------------
+
+job_gets:
+	
+	# Use the MARS builtin system call (4) to print strings.
+	
+	li $v0, 4               # System call code (4) print string. 
+	la $a0, JOB_GETS_HELLO  # String to print.
+	syscall 		# Execute the MARS built-in system call (4) to print string.
+	
+	# Use the MARS builtin system call (4) to print string.
+	
+	li $v0, 4
+	la $a0, JOB_ID
+	syscall
+	
+	# Use the custom system call (getjid, system call 0) to get the kernel id of this job. 
+	
+	li $v0, 0	# Custom system call code 0 (getjid).
+	teqi $zero, 0   # Generate a trap exception to handle the system call.
+	
+	# $a0 now containts the job id. 
+	
+	# Use the MARS builtin system call (1) to print the id (integer).
+
+	li $v0, 1
+	syscall
+
+	# Use the MARS builtin system call (4) to print string.
+	
+	li $v0, 4
+	la $a0, NL
+	syscall
+
+	# Use the MARS builtin system call (4) to print strings.
+	
+	li $v0, 4               # System call code (4) print string. 	
+	la $a0, ENTER_SRTING       # String to print.
+	syscall 		# Execute the Mars built-in system call (4) to print string.	
+
+	# Use the built in version of the getc system call
+	
+	li $v0, 12		# System call code (12) read_char.
+	syscall 		# Execute the Mars built-in system call (12) read_char.	
+	
+	# ASCII value of key pressed now in $v0
+
+	# Use the MARS builtin system call (4) to print strings.
+	
+	sb $v0, MARS_GETC_RESULT + 17
+	li $v0, 4
+	la $a0, MARS_GETC_RESULT
+	syscall 
+	
+	# Set $s0 to 0xabcd1234.
+	
+	li $s0, 0xabcd1234
+ 
+	# Enter infintite loop. 
+	
+job_gets_infinite_loop:
+	
+	# Use the MARS builtin system call (4) to print strings.
+	
+	li $v0, 4               # System call code (4) print string. 	
+	la $a0, PRESS_MMIO_KEY  # String to print.
+	syscall 		# Execute the Mars built-in system call (4) to print string.	
+
+	# Execute the custom gets system call (system call 8).
+	
+	li $v0, 8
+	la $a0, __charbuff
+	li $a1, 32
+	teqi $zero, 0    
+	
+	# ASCII value of key pressed now in $a0
+	
+	# Use the MARS builtin system call (4) to print strings.
+
+
+	li $v0, 4
+	syscall 
+	
+	j job_getc_infinite_loop
+
+
 ###############################################################################
 # KERNEL DATA SEGMENT
 #
@@ -320,6 +412,7 @@ __context_array:   __job_0_context
 __running: 	.word -1 # ID of currently running job.
 __ready: 	.word -1 # ID of job ready to run.
 __waiting:	.word -1 # ID of job blocked waiting for I/O action to complete. 
+__waiting_gets:	.word -1 # If 1 waiting for gets if 0 gaiting for getc
 
 # Allocate storage for the kernel stack. The stack grows from high addresses 
 # towards low addresses. 
@@ -349,6 +442,10 @@ __at:	.word 0
 __error_msg_1: .asciiz "ERROR: Unhandled exception (code "
 __error_msg_2: .asciiz  ")\n"
 __error_msg_3: .asciiz "ERROR: Unsuported system call (code "
+
+#buffert for gets
+
+__charbuff:    .space 32
 
 		
 ###############################################################################
@@ -571,6 +668,7 @@ __trap_handler:
 TODO_3: # Jump to label __system_call_getc for system call code 12.
 	beq $v0, 12, __system_call_getc
 	
+   	beq $v0, 8 __system_call_gets
    	
    	j __unsported_system_call
  
@@ -689,7 +787,12 @@ TODO_7:	# The value of EPC + 4 must now be saved in the context of the caller.
 	
 	eret
 	
-   	
+	
+__system_call_gets:
+	addi $t1, $zero, 1
+	sw $t1, __waiting_gets
+	
+  	
 __unsported_system_call:
 
 	li $v0, 4
