@@ -423,7 +423,9 @@ __save_running_job_context:
 	
 TODO_1: # Save $a0, $a1, $s0 to the context. 
         	
-	
+	sw $s0, 8($a0)
+	sw $s0, 12($a1)
+	sw $s0, 16($s0)
 	lw $a0, __at            # NOTE: $at was saved to memory when entering the kernel!
 	sw $a0, 20($k1)         # $at
 	
@@ -466,7 +468,10 @@ TODO_2: # Restore $a0, $a1, $s0 from the context.
 
 	# Set EPC in Coprocessor 0 to the PC value read from context. 
 	
-	mtc0 $k1, $14		
+	mtc0 $k1, $14
+	lw $s0, 8($a0)
+	lw $s0, 12($a1)
+	lw $s0, 16($s0) 		
 	
 	jr $ra
 	
@@ -601,6 +606,8 @@ TODO_5:	# Get address of the instruction (teqi) causing the exception.
 	# TIP: Use the mfc0 (Move FRom Coprocessor 0) instruction to get the value of
 	# EPC.
 	
+	mfc0 $t0, $14
+	
 	
 	# If resuming the caller at of the EPC this will cause the very same
 	# instruction to be executed again, i.e., executing the teqi used to initiate
@@ -611,8 +618,10 @@ TODO_5:	# Get address of the instruction (teqi) causing the exception.
 TODO_6:	# To resume at the instruction following the teqi instruction, 
 	# add 4 to EPC and store the result in $t1. 
 	
+	
 	# TIP: Use the addi (Add Immediate) instruction. 
 	
+	addi $t1, $t0, 4
 	
 TODO_7:	# The value of EPC + 4 must now be saved in the context of the caller. 
 
@@ -626,6 +635,7 @@ TODO_7:	# The value of EPC + 4 must now be saved in the context of the caller.
 	# TIP: Use the sw (Store Word) instruction to save the content of EPC + 4 ($t1) 
 	# Save EPC + 4 in user context at offset 0 (program counter). 
 	
+	mtc0 $t1, $14 
 		
 	# Job id of job to resume while the calling job waits. 
 	
