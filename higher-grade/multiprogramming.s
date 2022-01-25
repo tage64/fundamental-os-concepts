@@ -49,6 +49,14 @@ boot:
         # If you use SPIM you must enable interrupts by setting the interrupt
         # enable bit in the Status register to 1. 
 
+	# Load status register
+	mfc0 $s0, $12
+
+	# Set the interrupt enable bit
+	ori $s1, $s0, 0x1
+
+	# Update the status register
+	mtc0 $s1, $12
 
 	# Initialize kernel data structures.
 		
@@ -561,6 +569,7 @@ __trap_handler:
    	beqz $v0, __system_call_getjid
    	
 TODO_3: # Jump to label __system_call_getc for system call code 12.
+	beq $v0, 12, __system_call_getc
 	
    	
    	j __unsported_system_call
@@ -575,6 +584,7 @@ TODO_3: # Jump to label __system_call_getc for system call code 12.
 	jal __restore_job_context
 
 TODO_4: # Put the jid of the caller in register $a0.
+	lw $a0, __running
 	
 	# TIP: The kernel saved the jid of the running job in memory at label __running
         	
@@ -794,6 +804,7 @@ TODO_8:	# Before resuming the waiting job, put the ASCII value of the pressed
 	# TIP: Use the (Load Word) instruction to read the ASCII value stored in 
 	# receiver data into $v0. 
 	
+	lw $v0, 0($k1)
 	
 	# Restore $at.
 	
