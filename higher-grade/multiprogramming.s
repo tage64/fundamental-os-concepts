@@ -137,6 +137,7 @@ CUSTOM_GETC_RESULT: 	.asciiz "\nCustom getc ==> X\n"
 # Memory addresses to the memory mapped receiver registers. 
 RECEIVER_CONTROL:	.word 0xffff0000
 RECEIVER_DATA:		.word 0xffff0004
+__charbuff:    .space 32
 	
 ###############################################################################
 # NON-TERMINATING USER LEVEL JOBS
@@ -444,8 +445,9 @@ __error_msg_2: .asciiz  ")\n"
 __error_msg_3: .asciiz "ERROR: Unsuported system call (code "
 
 #buffert for gets
-
-__charbuff:    .space 32
+__getsmax .word 0
+__getscount .word 0
+__getsbuff .word 0
 
 		
 ###############################################################################
@@ -791,6 +793,12 @@ TODO_7:	# The value of EPC + 4 must now be saved in the context of the caller.
 __system_call_gets:
 	addi $t1, $zero, 1
 	sw $t1, __waiting_gets
+	sw $zero, __getscount
+	sw $a0, __getsbuff
+	sw $a1, __getsmax
+	j __system_call_getc
+	
+	
 	
   	
 __unsported_system_call:
@@ -873,7 +881,104 @@ __kbd_interrupt:
 	li $k1, -1
 	beq $k0, $k1, __return_from_interrupt 
 	
+__gets_system_call_pending:
+	lw $t0, __waitinggets
+	li $t1, 1
+	bne $t0, $t1 __getc_system_call_pending
 	
+	
+	
+	li $k1, 0xffff0004
+	
+	lw $t2, 0($k1)
+	
+	sb $t0, NL
+	
+	beq $t2, $t0 end_of_gets
+	
+	lw $t0, __getscount
+	
+	lw $t3, __getsbuff
+	
+	add $t1, $t0, $a3
+	
+	sb $t2, $t1
+	
+	addi $t0, $t0, 1
+	
+	sw $t0, __getscount
+	
+	lw $t1, __getsmax
+	
+	beq $t0, $t1 end_of_gets
+	
+	mfc0 $k0, $12
+	
+	# Set bit 0 (interrupt enable) to 1.
+	
+	li $k1, 1
+	or $k0, $k0, $k1
+	
+	# Update the STATUS register. 
+	
+	mtc0 $k0, $12 
+	
+	# Resume execution of the waiting job. The eret instruction sets $pc to the
+	# value of EPC.
+	
+	eret
+	
+end_of_gets:
+	lw $t0, __getscount
+	
+	lw $t3, __getsbuff
+	
+	add $t1, $t0, $a3
+	
+	addi $t1, $t1, 1
+	
+	sb $0, $t1
+	
+	
+	lw $k0, __waiting
+	lw $k1, __running
+	sw $k0, __running
+	sw $k1, __ready
+	
+	sw $zero, __waitinggets
+	
+	jal __restore_job_context
+	
+	lw $v0, 0($k1)
+	
+	# Restore $at.
+	
+	lw $at, 20($k0) 
+
+	# NOTE: From this point no pseudo instructions can be used. 
+	
+	# Done handling the interupt, enable all interrupts.
+	
+	# Get content of the STATUS register.  
+	
+	mfc0 $k0, $12
+	
+	# Set bit 0 (interrupt enable) to 1.
+	
+	li $k1, 1
+	or $k0, $k0, $k1
+	
+	# Update the STATUS register. 
+	
+	mtc0 $k0, $12 
+	
+	# Resume execution of the waiting job. The eret instruction sets $pc to the
+	# value of EPC.
+	
+	eret
+	
+	
+
 __getc_system_call_pending:
 	
 	# A job is waiting for input.
