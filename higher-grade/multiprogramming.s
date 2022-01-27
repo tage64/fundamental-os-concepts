@@ -374,9 +374,10 @@ job_gets_infinite_loop:
 
 
 	li $v0, 4
+	la $a0, __charbuff
 	syscall 
 	
-	j job_getc_infinite_loop
+	j job_gets_infinite_loop
 
 
 ###############################################################################
@@ -910,6 +911,8 @@ __gets_system_call_pending:
 	
 	lw $t1, __getsmax
 	
+	addi $t1, $t1, -1
+	
 	beq $t0, $t1 end_of_gets
 	
 	mfc0 $k0, $12
@@ -948,8 +951,6 @@ end_of_gets:
 	sw $zero, __waiting_gets
 	
 	jal __restore_job_context
-	
-	lw $v0, 0($k1)
 	
 	# Restore $at.
 	
