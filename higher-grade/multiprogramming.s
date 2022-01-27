@@ -126,7 +126,7 @@ JOB_ID:			.asciiz "Job id = "
 NL:			.asciiz "\n"
 
 PRESS_KEY:		.asciiz "Press a key on the keyboard ...\n"
-ENTER_SRTING		.asciiz "Enter a string ...\n"
+ENTER_STRING:		.asciiz "Enter a string ...\n"
 PRESS_MMIO_KEY:		.asciiz "Type a character in the MMIO Simulator keyboard input area ..\n"
 
 # In these strings the X is at offset 17 and will be replaced before printing. 
@@ -330,8 +330,8 @@ job_gets:
 	# Use the MARS builtin system call (4) to print strings.
 	
 	li $v0, 4               # System call code (4) print string. 	
-	la $a0, ENTER_SRTING       # String to print.
-	syscall 		# Execute the Mars built-in system call (4) to print string.	
+	la $a0, ENTER_STRING       # String to print.
+	#syscall 		# Execute the Mars built-in system call (4) to print string.	
 
 	# Use the built in version of the getc system call
 	
@@ -445,9 +445,9 @@ __error_msg_2: .asciiz  ")\n"
 __error_msg_3: .asciiz "ERROR: Unsuported system call (code "
 
 #buffert for gets
-__getsmax .word 0
-__getscount .word 0
-__getsbuff .word 0
+__getsmax:	.word 0
+__getscount:	.word 0
+__getsbuff:	.word 0
 
 		
 ###############################################################################
@@ -882,7 +882,7 @@ __kbd_interrupt:
 	beq $k0, $k1, __return_from_interrupt 
 	
 __gets_system_call_pending:
-	lw $t0, __waitinggets
+	lw $t0, __waiting_gets
 	li $t1, 1
 	bne $t0, $t1 __getc_system_call_pending
 	
@@ -892,7 +892,7 @@ __gets_system_call_pending:
 	
 	lw $t2, 0($k1)
 	
-	sb $t0, NL
+	lb $t0, NL
 	
 	beq $t2, $t0 end_of_gets
 	
@@ -900,9 +900,9 @@ __gets_system_call_pending:
 	
 	lw $t3, __getsbuff
 	
-	add $t1, $t0, $a3
+	add $t1, $t0, $t3
 	
-	sb $t2, $t1
+	sb $t2, 0($t1)
 	
 	addi $t0, $t0, 1
 	
@@ -933,11 +933,11 @@ end_of_gets:
 	
 	lw $t3, __getsbuff
 	
-	add $t1, $t0, $a3
+	add $t1, $t0, $t3
 	
 	addi $t1, $t1, 1
 	
-	sb $0, $t1
+	sb $0, 0($t1)
 	
 	
 	lw $k0, __waiting
@@ -945,7 +945,7 @@ end_of_gets:
 	sw $k0, __running
 	sw $k1, __ready
 	
-	sw $zero, __waitinggets
+	sw $zero, __waiting_gets
 	
 	jal __restore_job_context
 	
