@@ -377,6 +377,10 @@ job_gets_infinite_loop:
 	la $a0, __charbuff
 	syscall 
 	
+	li $v0, 4
+	la $a0, NL
+	syscall 
+	
 	j job_gets_infinite_loop
 
 
@@ -534,8 +538,8 @@ TODO_1: # Save $a0, $a1, $s0 to the context.
 	sw $a0, 8($k1)
 	sw $a1, 12($k1)
 	sw $s0, 16($k1)
-	lw $a0, __at            # NOTE: $at was saved to memory when entering the kernel!
-	sw $a0, 20($k1)         # $at
+	lw $s0, __at            # NOTE: $at was saved to memory when entering the kernel!
+	sw $s0, 20($k1)         # $at
 	
 	# Pop return address.
 	
@@ -937,8 +941,6 @@ end_of_gets:
 	lw $t3, __getsbuff
 	
 	add $t1, $t0, $t3
-	
-	addi $t1, $t1, 1
 	
 	sb $0, 0($t1)
 	
